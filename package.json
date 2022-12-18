@@ -34,9 +34,7 @@
     "webpack-cli": "^5.0.1"
   },
   "lint-staged": {
-    "**/*": [
-      "prettier --write --ignore-unknown",
-      "webpack"
-    ]
+    "**/*": "prettier --write --ignore-unknown",
+    "frontend/**/*.js": "webpack"
   }
 }
