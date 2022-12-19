@@ -286,12 +286,12 @@ router.get("/", (request, response) => {
 
 As you can imagine, it could get really tedious generating these html strings by hand, especially when we want to insert dynamic information into the html (like the variable `name`, above). Express allows us to integrate a “template engine” that removes the tedium from dynamically generating html. A templating engine allows us to specify a template, provide it with values we want to plug into that template (sometimes called “locals”), and then uses the template to generate the HTML.
 
-There are a few different template engines supported by express. I prefer `pug`, so that is what I will use in this example. Feel free to research different template engines that are supported by express if `pug` isn’t your cup of tea: [https://expressjs.com/en/resources/template-engines.html](https://expressjs.com/en/resources/template-engines.html).
+There are a few different template engines supported by express. This branch uses `ejs`. Feel free to research different template engines that are supported by express if `ejs` isn’t your cup of tea: [https://expressjs.com/en/resources/template-engines.html](https://expressjs.com/en/resources/template-engines.html).
 
 First, install the template engine library:
 
 ```bash
-npm install pug
+npm install ejs
 ```
 
 In `server.js`, tell the express application to use the template engine (doing this after immediately after the application instance is created so that the engine is available for us in any route), and _where_ to find the templates:
@@ -300,7 +300,7 @@ In `server.js`, tell the express application to use the template engine (doing t
 const app = express();
 
 app.set("views", path.join(__dirname, "backend", "views"));
-app.set("view engine", "pug");
+app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "backend", "static")));
 ```
 
@@ -308,32 +308,40 @@ Create the directory to store our templates (also called views), and our first t
 
 ```bash
 mkdir backend/views
-touch backend/views/layout.pug
-touch backend/views/home.pug
+touch backend/views/site-header.ejs
+touch backend/views/home.ejs
+touch backend/views/site-footer.ejs
 ```
 
-The `layout.pug` file is used to create the content we want for _every page_, and specifies a “block” that is used to insert page-specific content (in this case defined in `home.pug`).
+The `site-header.ejs` and `site-footer.ejs` files are used to create the content we want for _every page_, and allows us to reuse common html around page-specific content (in this case defined in `home.ejs`).
 
-First, in `layout.pug`, add the following:
+First, in `site-header.ejs`, add the following:
 
-```pug
-html 
-  head 
-    title= title 
-    link(rel='stylesheet' href='/stylesheets/home.css') 
-  body
-    block content
+```html
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/stylesheets/home.css" />
+  </head>
+  <body></body>
+</html>
 ```
 
-In `home.pug`, add:
+In `site-footer.ejs`, add the following:
 
-```pug
-extends layout
+```html
+  </body>
+</html>
+```
 
-block content
-  h1= title
+In `home.ejs`, add:
 
-  p= message
+```html
+<%- include("site-header", { title: title }) %>
+<h1><%= title %></h1>
+
+<p><%= message %></p>
+<%- include("site-footer") %>
 ```
 
 Return to our root route, and change `response.send` to:
@@ -345,7 +353,7 @@ response.render("home", {
 });
 ```
 
-In `layout.pug`, the html skeleton is defined for our html page. `home.pug` _extends_ this layout, and inserts content into the “block” defined in the layout file. The `title=`, `h1=`, and `p=` is special pug syntax that means “create an html element whose content will be the value of some variable. Notice that in the `layout.pug` file, I added a stylesheet. We will discuss stylesheets and CSS later in the semester; for now, create a directory `stylesheets` in our `static` directory:
+In `site-header.ejs` and `site-footer.ejs`, the html skeleton is defined for our html page. `home.ejs` _includes_ these layout files to set up the html skeleton, and defines content in between the `include`s. The `<%= %>` syntax means to output the value of a local (variable passed in to the template), and the `<%- %>` syntax means to output the included content _unescaped_ (not removing special characters that could be interpreted as HTML, since we want this to be interpreted as HTML). Notice that in the `site-header.ejs` file, I added a stylesheet. We will discuss stylesheets and CSS later in the semester; for now, create a directory `stylesheets` in our `static` directory:
 
 ```bash
 mkdir backend/static/stylesheets
@@ -437,10 +445,10 @@ npm run build
 
 A new folder named `scripts` will be created in `/backend/static` containing the file `bundle.js`.
 
-We will include this in the `layout.pug` file we created earlier by adding the following `script` tag underneath the `link` tag:
+We will include this in the `site-header.ejs` file we created earlier by adding the following `script` tag underneath the `link` tag:
 
-```pug
-script(src='/scripts/bundle.js')
+```html
+<script src="/scripts/bungle.js"></script>
 ```
 
 Make sure your server is running (`npm run start:dev`), and point your browser at [http://localhost:3000](http://localhost:3000) . Check the console in the browser, and you should now see the `console.log` statement we added in the `frontend/index.js` file.
@@ -494,8 +502,9 @@ In this file, add the following:
 
 ```json
 {
-  "ext": "js,hbs",
-  "ignore": ["backend/static"]
+  "ext": "js,ejs",
+  "ignore": ["backend/static"],
+  "watch": "backend"
 }
 ```
 
@@ -505,13 +514,13 @@ Now we want to run _both_ the `nodemon` process and the `webpack` process concur
 npm install --save-dev concurrently
 ```
 
-We will change the `start:dev` script to use `concurrently`, and move the existing `start:dev` script to `server:dev` in `package.json`:
+We will change the `start:dev` script to use `concurrently`, and move the existing `start:dev` script to `server:dev` in `package.json`, removing the configuration flags from the `nodemon` command:
 
 ```json
 {
   "scripts": {
     "start:dev": "concurrently \"npm:server:dev\" \"npm:build:dev\"",
-    "server:dev": "NODE_ENV=development nodemon -e js,pug --watch backend ./server.js"
+    "server:dev": "NODE_ENV=development nodemon ./server.js"
   }
 }
 ```
@@ -565,7 +574,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.set("views", path.join(__dirname, "backend", "views"));
-app.set("view engine", "pug");
+app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "backend", "static")));
 
 const rootRoutes = require("./backend/routes/root");
