@@ -317,10 +317,10 @@ The `layout.pug` file is used to create the content we want for _every page_, an
 First, in `layout.pug`, add the following:
 
 ```pug
-html 
-  head 
-    title= title 
-    link(rel='stylesheet' href='/stylesheets/home.css') 
+html
+  head
+    title= title
+    link(rel='stylesheet' href='/stylesheets/home.css')
   body
     block content
 ```
@@ -494,8 +494,9 @@ In this file, add the following:
 
 ```json
 {
-  "ext": "js,hbs",
-  "ignore": ["backend/static"]
+  "ext": "js,pug",
+  "ignore": ["backend/static"],
+  "watch": "backend"
 }
 ```
 
@@ -505,13 +506,13 @@ Now we want to run _both_ the `nodemon` process and the `webpack` process concur
 npm install --save-dev concurrently
 ```
 
-We will change the `start:dev` script to use `concurrently`, and move the existing `start:dev` script to `server:dev` in `package.json`:
+We will change the `start:dev` script to use `concurrently`, and move the existing `start:dev` script to `server:dev` in `package.json`, removing the configuration flags from the `nodemon` command:
 
 ```json
 {
   "scripts": {
     "start:dev": "concurrently \"npm:server:dev\" \"npm:build:dev\"",
-    "server:dev": "NODE_ENV=development nodemon -e js,pug --watch backend ./server.js"
+    "server:dev": "NODE_ENV=development nodemon ./server.js"
   }
 }
 ```
